@@ -1,0 +1,7 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#f1f5f9" />
+  <path d="M160 110v80h80v-80h-80zm10 10h60v60h-60v-60z" fill="#94a3b8" />
+  <path d="M200 120v20h20v-20h-20zm5 5h10v10h-10v-10z" fill="#94a3b8" />
+  <path d="M180 170l10-10 10 10 10-10 10 10 10-10 10 10H180z" fill="#94a3b8" />
+  <text x="200" y="220" font-family="sans-serif" font-size="14" fill="#64748b" text-anchor="middle">Imagem não disponível</text>
+</svg>

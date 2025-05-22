@@ -1,0 +1,33 @@
+// Este é um arquivo de configuração do Prisma otimizado para o AWS Amplify
+// Use este arquivo como referência para configurar seu banco de dados na AWS
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Definições de modelo para o banco de dados
+// Use os mesmos modelos do seu schema.prisma principal
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  role              String    @default("user")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  isOnboarded       Boolean   @default(false)
+  isActive          Boolean   @default(true)
+  lastLogin         DateTime?
+
+  // Relacionamentos e campos adicionais conforme necessário
+}
+
+// Adicione outros modelos conforme necessário para a aplicação

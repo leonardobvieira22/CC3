@@ -1,0 +1,25 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install -g bun
+        - echo "Gerando Prisma Client..."
+        - npx prisma generate
+        - bun install
+    build:
+      commands:
+        - echo "Verificando dependências SWC..."
+        - npx next --version
+        - echo "Instalando dependências SWC manualmente se necessário..."
+        - if ! grep -q "@next/swc" bun.lock; then bun add -d @next/swc-linux-x64-gnu @next/swc-linux-x64-musl; fi
+        - echo "Building Next.js application..."
+        - NODE_OPTIONS="--max-old-space-size=4096" bun run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

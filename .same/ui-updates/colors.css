@@ -1,0 +1,85 @@
+/* Updated root CSS variables */
+:root {
+  --font-sans: 'Inter', sans-serif;
+
+  --background: 0 0% 100%;
+  --foreground: 222 14% 7%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 14% 7%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 14% 7%;
+
+  --primary: 241 65% 59%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 198 80% 92%;
+  --secondary-foreground: 241 65% 59%;
+
+  --muted: 210 20% 98%;
+  --muted-foreground: 220 14% 48%; /* Improved contrast */
+
+  --accent: 210 20% 97%;
+  --accent-foreground: 222 14% 7%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* New semantic colors */
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+
+  --info: 214 100% 50%;
+  --info-foreground: 0 0% 100%;
+
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 224 71% 45%;
+
+  --radius: 5px;
+}
+
+/* Updated dark mode variables */
+.dark {
+  --background: 222 14% 7%;
+  --foreground: 0 0% 100%;
+
+  --card: 222 14% 7%;
+  --card-foreground: 0 0% 100%;
+
+  --popover: 222 14% 7%;
+  --popover-foreground: 0 0% 100%;
+
+  --primary: 241 65% 59%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 70%; /* Improved contrast */
+
+  --accent: 217 33% 17%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* New semantic colors in dark mode */
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+
+  --info: 214 100% 50%;
+  --info-foreground: 0 0% 100%;
+
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 224 71% 45%;
+}

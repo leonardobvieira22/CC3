@@ -1,0 +1,1668 @@
+"use client"
+
+import React, { useEffect, useRef, useState } from 'react'
+import {
+  createChart,
+  ColorType,
+  CrosshairMode,
+  LineStyle,
+  type SeriesType,
+  type IChartApi,
+  type ISeriesApi,
+  type CandlestickSeriesOptions,
+  type DeepPartial,
+  type ChartOptions
+} from 'lightweight-charts'
+import {
+  useBinanceWebSocket,
+  type KlineTick,
+  type TradeTick,
+  WebSocketTick
+} from '@/lib/services/binanceWebSocket'
+import { useBinance } from '@/lib/context/BinanceContext'
+import { BinanceService } from '@/lib/services/binance'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  Settings,
+  ChevronDown,
+  BarChart2,
+  Layers,
+  Share2,
+  CandlestickChart,
+  LineChart
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+// Tipos de dados
+type Candle = {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+type Trade = {
+  id: number;
+  time: number;
+  price: number;
+  quantity: number;
+  isBuyerMaker: boolean;
+}
+
+type OrderType = 'LIMIT' | 'MARKET'
+type OrderSide = 'BUY' | 'SELL'
+
+// Constantes
+const DEFAULT_SYMBOL = 'BTCUSDT'
+const DEFAULT_INTERVAL = '1m'
+const AVAILABLE_INTERVALS = [
+  { value: '1m', label: '1m' },
+  { value: '5m', label: '5m' },
+  { value: '15m', label: '15m' },
+  { value: '30m', label: '30m' },
+  { value: '1h', label: '1h' },
+  { value: '4h', label: '4h' },
+  { value: '1d', label: '1d' },
+  { value: '1w', label: '1w' }
+]
+
+const AVAILABLE_SYMBOLS = [
+  { value: 'BTCUSDT', label: 'BTC/USDT' },
+  { value: 'ETHUSDT', label: 'ETH/USDT' },
+  { value: 'BNBUSDT', label: 'BNB/USDT' },
+  { value: 'SOLUSDT', label: 'SOL/USDT' },
+  { value: 'DOTUSDT', label: 'DOT/USDT' },
+  { value: 'ADAUSDT', label: 'ADA/USDT' }
+]
+
+export default function TradingPanel() {
+  // Estados do componente
+  const [symbol, setSymbol] = useState<string>(DEFAULT_SYMBOL)
+  const [interval, setInterval] = useState<string>(DEFAULT_INTERVAL)
+  const [chartType, setChartType] = useState<'candles' | 'line'>('candles')
+  const [candles, setCandles] = useState<Candle[]>([])
+  const [recentTrades, setRecentTrades] = useState<Trade[]>([])
+  const [lastPrice, setLastPrice] = useState<number | null>(null)
+  const [priceChange, setPriceChange] = useState<number>(0)
+  const [orderSide, setOrderSide] = useState<OrderSide>('BUY')
+  const [orderType, setOrderType] = useState<OrderType>('LIMIT')
+  const [orderPrice, setOrderPrice] = useState<string>('')
+  const [orderQuantity, setOrderQuantity] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  // Referências
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null)
+
+  // Hooks personalizados
+  const { binanceService, isConnected } = useBinance()
+  const {
+    subscribeKline,
+    subscribeTrade,
+    unsubscribe,
+    unsubscribeAll,
+    isConnected: isWsConnected
+  } = useBinanceWebSocket()
+
+  // Carregar dados históricos
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      setIsLoading(true)
+      try {
+        if (!binanceService) return
+
+        // Obter dados históricos de candles
+        const klines = await binanceService.getKlines(symbol, interval, 200)
+        const formattedCandles = klines.map(kline => ({
+          time: kline.openTime / 1000,
+          open: Number.parseFloat(kline.open),
+          high: Number.parseFloat(kline.high),
+          low: Number.parseFloat(kline.low),
+          close: Number.parseFloat(kline.close),
+          volume: Number.parseFloat(kline.volume)
+        }))
+
+        setCandles(formattedCandles)
+
+        // Obter negociações recentes
+        const trades = await binanceService.getRecentTrades(symbol, 20)
+        const formattedTrades = trades.map(trade => ({
+          id: trade.id,
+          time: trade.time,
+          price: Number.parseFloat(trade.price),
+          quantity: Number.parseFloat(trade.qty),
+          isBuyerMaker: trade.isBuyerMaker
+        }))
+
+        setRecentTrades(formattedTrades)
+
+        // Definir o preço atual e a mudança de preço
+        if (formattedCandles.length > 0) {
+          const lastCandle = formattedCandles[formattedCandles.length - 1]
+          setLastPrice(lastCandle.close)
+          setOrderPrice(lastCandle.close.toString())
+
+          const previousClose = formattedCandles[formattedCandles.length - 2]?.close || lastCandle.open
+          const change = ((lastCandle.close - previousClose) / previousClose) * 100
+          setPriceChange(change)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados históricos:', error)
+        toast.error('Erro ao carregar dados históricos')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchHistoricalData()
+
+    // Limpar as inscrições antigas ao mudar de símbolo/intervalo
+    return () => {
+      const klineStreamName = `${symbol.toLowerCase()}@kline_${interval}`
+      const tradeStreamName = `${symbol.toLowerCase()}@trade`
+
+      unsubscribe(klineStreamName)
+      unsubscribe(tradeStreamName)
+    }
+  }, [symbol, interval, binanceService])
+
+  // Configurar o gráfico quando os dados históricos forem carregados
+  useEffect(() => {
+    if (!chartContainerRef.current || candles.length === 0) return
+
+    // Limpar o gráfico existente
+    if (chartRef.current) {
+      chartRef.current.remove()
+      chartRef.current = null
+      seriesRef.current = null
+    }
+
+    // Opções do gráfico
+    const chartOptions: DeepPartial<ChartOptions> = {
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor: '#d1d4dc',
+      },
+      grid: {
+        vertLines: { color: 'rgba(42, 46, 57, 0.2)' },
+        horzLines: { color: 'rgba(42, 46, 57, 0.2)' },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
+      crosshair: {
+        mode: CrosshairMode.Normal,
+      },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+        borderColor: 'rgba(42, 46, 57, 0.2)',
+        rightOffset: 5,
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(42, 46, 57, 0.2)',
+      },
+    }
+
+    // Criar o gráfico
+    const chart = createChart(chartContainerRef.current, chartOptions)
+    chartRef.current = chart
+
+    // Adicionar série (candles ou linha)
+    let series
+    if (chartType === 'candles') {
+      const candlestickOptions: DeepPartial<CandlestickSeriesOptions> = {
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderVisible: false,
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+      }
+      series = chart.addCandlestickSeries(candlestickOptions)
+    } else {
+      series = chart.addLineSeries({
+        color: '#2962FF',
+        lineWidth: 2,
+      })
+    }
+    seriesRef.current = series
+
+    // Adicionar dados das candles
+    series.setData(candles.map(candle => ({
+      time: candle.time,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+    })))
+
+    // Ajustar visualização
+    chart.timeScale().fitContent()
+
+    // Configurar comportamento responsivo
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight
+        })
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    // Limpeza
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (chartRef.current) {
+        chartRef.current.remove()
+        chartRef.current = null
+        seriesRef.current = null
+      }
+    }
+  }, [candles, chartType])
+EOL  
+cd /home/project && cd crypto-ai-trading-platform && cat > src/components/dashboard/TradingPanel.tsx << 'EOL'
+"use client"
+
+import React, { useEffect, useRef, useState } from 'react'
+import {
+  createChart,
+  ColorType,
+  CrosshairMode,
+  LineStyle,
+  type SeriesType,
+  type IChartApi,
+  type ISeriesApi,
+  type CandlestickSeriesOptions,
+  type DeepPartial,
+  type ChartOptions
+} from 'lightweight-charts'
+import {
+  useBinanceWebSocket,
+  type KlineTick,
+  type TradeTick,
+  WebSocketTick
+} from '@/lib/services/binanceWebSocket'
+import { useBinance } from '@/lib/context/BinanceContext'
+import { BinanceService } from '@/lib/services/binance'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  Settings,
+  ChevronDown,
+  BarChart2,
+  Layers,
+  Share2,
+  CandlestickChart,
+  LineChart
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+// Tipos de dados
+type Candle = {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+type Trade = {
+  id: number;
+  time: number;
+  price: number;
+  quantity: number;
+  isBuyerMaker: boolean;
+}
+
+type OrderType = 'LIMIT' | 'MARKET'
+type OrderSide = 'BUY' | 'SELL'
+
+// Constantes
+const DEFAULT_SYMBOL = 'BTCUSDT'
+const DEFAULT_INTERVAL = '1m'
+const AVAILABLE_INTERVALS = [
+  { value: '1m', label: '1m' },
+  { value: '5m', label: '5m' },
+  { value: '15m', label: '15m' },
+  { value: '30m', label: '30m' },
+  { value: '1h', label: '1h' },
+  { value: '4h', label: '4h' },
+  { value: '1d', label: '1d' },
+  { value: '1w', label: '1w' }
+]
+
+const AVAILABLE_SYMBOLS = [
+  { value: 'BTCUSDT', label: 'BTC/USDT' },
+  { value: 'ETHUSDT', label: 'ETH/USDT' },
+  { value: 'BNBUSDT', label: 'BNB/USDT' },
+  { value: 'SOLUSDT', label: 'SOL/USDT' },
+  { value: 'DOTUSDT', label: 'DOT/USDT' },
+  { value: 'ADAUSDT', label: 'ADA/USDT' }
+]
+
+export default function TradingPanel() {
+  // Estados do componente
+  const [symbol, setSymbol] = useState<string>(DEFAULT_SYMBOL)
+  const [interval, setInterval] = useState<string>(DEFAULT_INTERVAL)
+  const [chartType, setChartType] = useState<'candles' | 'line'>('candles')
+  const [candles, setCandles] = useState<Candle[]>([])
+  const [recentTrades, setRecentTrades] = useState<Trade[]>([])
+  const [lastPrice, setLastPrice] = useState<number | null>(null)
+  const [priceChange, setPriceChange] = useState<number>(0)
+  const [orderSide, setOrderSide] = useState<OrderSide>('BUY')
+  const [orderType, setOrderType] = useState<OrderType>('LIMIT')
+  const [orderPrice, setOrderPrice] = useState<string>('')
+  const [orderQuantity, setOrderQuantity] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  // Referências
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null)
+
+  // Hooks personalizados
+  const { binanceService, isConnected } = useBinance()
+  const {
+    subscribeKline,
+    subscribeTrade,
+    unsubscribe,
+    unsubscribeAll,
+    isConnected: isWsConnected
+  } = useBinanceWebSocket()
+
+  // Carregar dados históricos
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      setIsLoading(true)
+      try {
+        if (!binanceService) return
+
+        // Obter dados históricos de candles
+        const klines = await binanceService.getKlines(symbol, interval, 200)
+        const formattedCandles = klines.map(kline => ({
+          time: kline.openTime / 1000,
+          open: Number.parseFloat(kline.open),
+          high: Number.parseFloat(kline.high),
+          low: Number.parseFloat(kline.low),
+          close: Number.parseFloat(kline.close),
+          volume: Number.parseFloat(kline.volume)
+        }))
+
+        setCandles(formattedCandles)
+
+        // Obter negociações recentes
+        const trades = await binanceService.getRecentTrades(symbol, 20)
+        const formattedTrades = trades.map(trade => ({
+          id: trade.id,
+          time: trade.time,
+          price: Number.parseFloat(trade.price),
+          quantity: Number.parseFloat(trade.qty),
+          isBuyerMaker: trade.isBuyerMaker
+        }))
+
+        setRecentTrades(formattedTrades)
+
+        // Definir o preço atual e a mudança de preço
+        if (formattedCandles.length > 0) {
+          const lastCandle = formattedCandles[formattedCandles.length - 1]
+          setLastPrice(lastCandle.close)
+          setOrderPrice(lastCandle.close.toString())
+
+          const previousClose = formattedCandles[formattedCandles.length - 2]?.close || lastCandle.open
+          const change = ((lastCandle.close - previousClose) / previousClose) * 100
+          setPriceChange(change)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados históricos:', error)
+        toast.error('Erro ao carregar dados históricos')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchHistoricalData()
+
+    // Limpar as inscrições antigas ao mudar de símbolo/intervalo
+    return () => {
+      const klineStreamName = `${symbol.toLowerCase()}@kline_${interval}`
+      const tradeStreamName = `${symbol.toLowerCase()}@trade`
+
+      unsubscribe(klineStreamName)
+      unsubscribe(tradeStreamName)
+    }
+  }, [symbol, interval, binanceService])
+
+  // Configurar o gráfico quando os dados históricos forem carregados
+  useEffect(() => {
+    if (!chartContainerRef.current || candles.length === 0) return
+
+    // Limpar o gráfico existente
+    if (chartRef.current) {
+      chartRef.current.remove()
+      chartRef.current = null
+      seriesRef.current = null
+    }
+
+    // Opções do gráfico
+    const chartOptions: DeepPartial<ChartOptions> = {
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor: '#d1d4dc',
+      },
+      grid: {
+        vertLines: { color: 'rgba(42, 46, 57, 0.2)' },
+        horzLines: { color: 'rgba(42, 46, 57, 0.2)' },
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
+      crosshair: {
+        mode: CrosshairMode.Normal,
+      },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+        borderColor: 'rgba(42, 46, 57, 0.2)',
+        rightOffset: 5,
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(42, 46, 57, 0.2)',
+      },
+    }
+
+    // Criar o gráfico
+    const chart = createChart(chartContainerRef.current, chartOptions)
+    chartRef.current = chart
+
+    // Adicionar série (candles ou linha)
+    let series
+    if (chartType === 'candles') {
+      const candlestickOptions: DeepPartial<CandlestickSeriesOptions> = {
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderVisible: false,
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+      }
+      series = chart.addCandlestickSeries(candlestickOptions)
+    } else {
+      series = chart.addLineSeries({
+        color: '#2962FF',
+        lineWidth: 2,
+      })
+    }
+    seriesRef.current = series
+
+    // Adicionar dados das candles
+    series.setData(candles.map(candle => ({
+      time: candle.time,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+    })))
+
+    // Ajustar visualização
+    chart.timeScale().fitContent()
+
+    // Configurar comportamento responsivo
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight
+        })
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    // Limpeza
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (chartRef.current) {
+        chartRef.current.remove()
+        chartRef.current = null
+        seriesRef.current = null
+      }
+    }
+  }, [candles, chartType])
+  // Inscrever-se em feeds de dados em tempo real
+  useEffect(() => {
+    if (!isConnected || candles.length === 0) return
+
+    // Callbacks para os WebSockets
+    const handleKlineUpdate = (data: KlineTick) => {
+      const { kline } = data
+
+      if (!kline.final) {
+        // Atualizar a última vela em tempo real
+        if (seriesRef.current) {
+          seriesRef.current.update({
+            time: kline.startTime / 1000,
+            open: Number.parseFloat(kline.open),
+            high: Number.parseFloat(kline.high),
+            low: Number.parseFloat(kline.low),
+            close: Number.parseFloat(kline.close),
+          })
+        }
+      } else {
+        // Adicionar uma nova vela quando a atual estiver finalizada
+        const newCandle = {
+          time: kline.startTime / 1000,
+          open: Number.parseFloat(kline.open),
+          high: Number.parseFloat(kline.high),
+          low: Number.parseFloat(kline.low),
+          close: Number.parseFloat(kline.close),
+          volume: Number.parseFloat(kline.volume)
+        }
+
+        setCandles(prevCandles => {
+          // Verificar se a vela já existe no array
+          const existingIndex = prevCandles.findIndex(c => c.time === newCandle.time)
+
+          if (existingIndex >= 0) {
+            // Substituir a vela existente
+            const updatedCandles = [...prevCandles]
+            updatedCandles[existingIndex] = newCandle
+            return updatedCandles
+          } else {
+            // Adicionar nova vela e remover a mais antiga se necessário
+            const updatedCandles = [...prevCandles, newCandle]
+            if (updatedCandles.length > 500) {
+              return updatedCandles.slice(1)
+            }
+            return updatedCandles
+          }
+        })
+      }
+
+      // Atualizar preço atual e variação
+      const currentPrice = Number.parseFloat(kline.close)
+      setLastPrice(currentPrice)
+
+      if (candles.length > 0) {
+        const previousClose = candles[candles.length - 1].close
+        const change = ((currentPrice - previousClose) / previousClose) * 100
+        setPriceChange(change)
+      }
+    }
+
+    const handleTradeUpdate = (data: TradeTick) => {
+      const trade = {
+        id: data.tradeId,
+        time: data.time,
+        price: Number.parseFloat(data.price),
+        quantity: Number.parseFloat(data.quantity),
+        isBuyerMaker: data.isBuyerMaker
+      }
+
+      setRecentTrades(prevTrades => {
+        // Adicionar a nova negociação ao início do array
+        const updatedTrades = [trade, ...prevTrades]
+        // Manter apenas as 20 mais recentes
+        return updatedTrades.slice(0, 20)
+      })
+
+      // Atualizar o preço atual
+      setLastPrice(trade.price)
+      setOrderPrice(trade.price.toString())
+    }
+
+    // Configurar WebSockets
+    subscribeKline({
+      symbols: [symbol],
+      interval,
+      callbacks: {
+        onKline: handleKlineUpdate,
+        onOpen: () => console.log(`Kline WebSocket connected for ${symbol}@${interval}`),
+        onClose: () => console.log(`Kline WebSocket disconnected for ${symbol}@${interval}`),
+        onError: (e) => console.error('Kline WebSocket error:', e)
+      }
+    })
+
+    subscribeTrade({
+      symbols: [symbol],
+      callbacks: {
+        onTrade: handleTradeUpdate,
+        onOpen: () => console.log(`Trade WebSocket connected for ${symbol}`),
+        onClose: () => console.log(`Trade WebSocket disconnected for ${symbol}`),
+        onError: (e) => console.error('Trade WebSocket error:', e)
+      }
+    })
+
+    // Limpeza ao desmontar
+    return () => {
+      const klineStreamName = `${symbol.toLowerCase()}@kline_${interval}`
+      const tradeStreamName = `${symbol.toLowerCase()}@trade`
+
+      unsubscribe(klineStreamName)
+      unsubscribe(tradeStreamName)
+    }
+  }, [symbol, interval, isConnected, candles, subscribeKline, subscribeTrade, unsubscribe])
+
+  // Limpar todas as conexões WebSocket ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      unsubscribeAll()
+    }
+  }, [unsubscribeAll])
+
+  // Atualizar o preço da ordem quando o último preço mudar
+  useEffect(() => {
+    if (orderType === 'LIMIT' && lastPrice) {
+      setOrderPrice(lastPrice.toString())
+    }
+  }, [lastPrice, orderType])
+
+  // Manipuladores de eventos
+  const handleSymbolChange = (value: string) => {
+    setSymbol(value)
+  }
+
+  const handleIntervalChange = (value: string) => {
+    setInterval(value)
+  }
+
+  const handleChartTypeChange = (value: 'candles' | 'line') => {
+    setChartType(value)
+  }
+
+  const handleOrderSideChange = (value: OrderSide) => {
+    setOrderSide(value)
+  }
+
+  const handleOrderTypeChange = (value: OrderType) => {
+    setOrderType(value)
+  }
+
+  const handleSubmitOrder = async () => {
+    if (!isConnected) {
+      toast.error('Por favor, conecte-se à sua conta Binance primeiro')
+      return
+    }
+
+    if (!orderQuantity || (orderType === 'LIMIT' && !orderPrice)) {
+      toast.error('Por favor, preencha todos os campos obrigatórios')
+      return
+    }
+
+    try {
+      toast.success(`Ordem simulada: ${orderSide} ${orderQuantity} ${symbol} à ${orderType === 'MARKET' ? 'preço de mercado' : orderPrice}`)
+
+      // Aqui seria feita a chamada real para enviar a ordem
+      // const result = await binanceService.createOrder(
+      //  symbol,
+      //  orderSide,
+      //  orderType,
+      //  orderQuantity,
+      //  orderType === 'LIMIT' ? orderPrice : undefined
+      // )
+
+      // Limpar os campos do formulário de ordem
+      setOrderQuantity('')
+
+      // Feedback ao usuário
+      toast.success(`Ordem de ${orderSide === 'BUY' ? 'compra' : 'venda'} enviada com sucesso!`)
+    } catch (error) {
+      console.error('Erro ao enviar ordem:', error)
+      toast.error('Erro ao enviar ordem. Verifique suas configurações.')
+    }
+  }
+
+  // Função para formatar preço
+  const formatPrice = (price: number): string => {
+    return price.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: price < 10 ? 6 : price < 1000 ? 4 : 2
+    })
+  }
+
+  // Função para formatar timestamp em hora
+  const formatTime = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }
+
+  // Status do WebSocket para exibir ao usuário
+  const wsStatus = isWsConnected(`${symbol.toLowerCase()}@kline_${interval}`)
+
+  return (
+    <div className="space-y-6 md:space-y-8">
+      {/* Cabeçalho responsivo */}
+      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Trading</h2>
+          <p className="text-muted-foreground">
+            Visualize gráficos em tempo real e execute ordens
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2">
+            <Badge variant={wsStatus ? "default" : "outline"} className={wsStatus ? "bg-green-500" : ""}>
+              {wsStatus ? "Conectado" : "Desconectado"}
+            </Badge>
+            <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Atualizar</span>
+            </Button>
+          </div>
+          <Button size="sm">
+            <Settings className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Configurações</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Seleção de símbolo e intervalo - responsivo */}
+      <div className="flex flex-wrap gap-2 sm:gap-4">
+        <div className="w-full sm:w-auto">
+          <Select value={symbol} onValueChange={handleSymbolChange}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Selecione um par" />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_SYMBOLS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-auto">
+          <Select value={interval} onValueChange={handleIntervalChange}>
+            <SelectTrigger className="w-full sm:w-24">
+              <SelectValue placeholder="Intervalo" />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_INTERVALS.map((i) => (
+                <SelectItem key={i.value} value={i.value}>
+                  {i.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1"></div>
+
+        {/* Tipo de gráfico */}
+        <div className="w-full sm:w-auto flex">
+          <Button
+            variant={chartType === 'candles' ? 'secondary' : 'outline'}
+            className="flex-1 sm:flex-none rounded-r-none text-xs sm:text-sm"
+            onClick={() => handleChartTypeChange('candles')}
+          >
+            <CandlestickChart className="h-4 w-4 mr-1 sm:mr-2" />
+            <span>Candles</span>
+          </Button>
+          <Button
+            variant={chartType === 'line' ? 'secondary' : 'outline'}
+            className="flex-1 sm:flex-none rounded-l-none text-xs sm:text-sm"
+            onClick={() => handleChartTypeChange('line')}
+          >
+            <LineChart className="h-4 w-4 mr-1 sm:mr-2" />
+            <span>Linha</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Preço atual e variação - responsivo */}
+      {lastPrice && (
+        <div className="flex items-center gap-4">
+          <div className="text-xl sm:text-2xl font-bold">
+            ${formatPrice(lastPrice)}
+          </div>
+          <div className={`flex items-center ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {priceChange >= 0 ? (
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4 mr-1" />
+            )}
+            {priceChange.toFixed(2)}%
+          </div>
+        </div>
+      )}
+
+      {/* Layout principal - grid responsivo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Gráfico - ocupa toda a largura em mobile, 2/3 em tablet, 3/4 em desktop */}
+        <div className="md:col-span-2 lg:col-span-3 space-y-4 md:space-y-6">
+          {/* Gráfico principal com altura responsiva */}
+          <Card>
+            <CardContent className="p-0 overflow-hidden">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]">
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-highlight"></div>
+                    <p className="mt-4 text-sm text-muted-foreground">Carregando dados...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]" ref={chartContainerRef}></div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Negociações recentes - responsivo com scroll horizontal em telas pequenas */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Negociações Recentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-4 font-medium">Hora</th>
+                      <th className="text-left py-2 px-4 font-medium">Preço</th>
+                      <th className="text-left py-2 px-4 font-medium">Quantidade</th>
+                      <th className="text-left py-2 px-4 font-medium">Lado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentTrades.map((trade) => (
+                      <tr key={trade.id} className="border-b">
+                        <td className="py-2 px-4">{formatTime(trade.time)}</td>
+                        <td className={`py-2 px-4 ${trade.isBuyerMaker ? 'text-red-500' : 'text-green-500'}`}>
+                          ${formatPrice(trade.price)}
+                        </td>
+                        <td className="py-2 px-4">{trade.quantity.toFixed(5)}</td>
+                        <td className="py-2 px-4">
+                          <Badge variant="outline" className={trade.isBuyerMaker ? 'text-red-500 border-red-500' : 'text-green-500 border-green-500'}>
+                            {trade.isBuyerMaker ? 'VENDA' : 'COMPRA'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Painel de ordens - ocupa toda a largura em mobile, 1/3 em tablet, 1/4 em desktop */}
+        <div className="md:col-span-1 lg:col-span-1">
+          <div className="sticky top-4 space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Nova Ordem</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="limit" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="limit" onClick={() => handleOrderTypeChange('LIMIT')}>
+                      Limite
+                    </TabsTrigger>
+                    <TabsTrigger value="market" onClick={() => handleOrderTypeChange('MARKET')}>
+                      Mercado
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <div className="mt-4 sm:mt-6">
+                    {/* Botões de compra/venda */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
+                      <Button
+                        className={`flex-1 text-sm sm:text-base ${orderSide === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                        onClick={() => handleOrderSideChange('BUY')}
+                      >
+                        Comprar
+                      </Button>
+                      <Button
+                        className={`flex-1 text-sm sm:text-base ${orderSide === 'SELL' ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                        onClick={() => handleOrderSideChange('SELL')}
+                      >
+                        Vender
+                      </Button>
+                    </div>
+
+                    {/* Formulário de ordem responsivo */}
+                    <TabsContent value="limit">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Preço</label>
+                          <div className="flex mt-1">
+                            <Input
+                              className="rounded-r-none"
+                              value={orderPrice}
+                              onChange={(e) => setOrderPrice(e.target.value)}
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                            />
+                            <Button variant="outline" className="rounded-l-none" disabled>
+                              USDT
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium">Quantidade</label>
+                          <div className="flex mt-1">
+                            <Input
+                              className="rounded-r-none"
+                              value={orderQuantity}
+                              onChange={(e) => setOrderQuantity(e.target.value)}
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                            />
+                            <Button variant="outline" className="rounded-l-none" disabled>
+                              {symbol.replace('USDT', '')}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <Separator className="my-2 sm:my-3" />
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Total</span>
+                            <span>{orderPrice && orderQuantity ? `${(Number.parseFloat(orderPrice) * Number.parseFloat(orderQuantity)).toFixed(2)} USDT` : '0.00 USDT'}</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          className={`w-full ${orderSide === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                          onClick={handleSubmitOrder}
+                          disabled={!orderPrice || !orderQuantity || !isConnected}
+                        >
+                          {orderSide === 'BUY' ? 'Comprar' : 'Vender'} {symbol.replace('USDT', '')}
+                        </Button>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="market">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Quantidade</label>
+                          <div className="flex mt-1">
+                            <Input
+                              className="rounded-r-none"
+                              value={orderQuantity}
+                              onChange={(e) => setOrderQuantity(e.target.value)}
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                            />
+                            <Button variant="outline" className="rounded-l-none" disabled>
+                              {symbol.replace('USDT', '')}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <Separator className="my-2 sm:my-3" />
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Total estimado</span>
+                            <span>{lastPrice && orderQuantity ? `~${(lastPrice * Number.parseFloat(orderQuantity)).toFixed(2)} USDT` : '0.00 USDT'}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            O preço do mercado pode variar do preço exibido.
+                          </p>
+                        </div>
+
+                        <Button
+                          className={`w-full ${orderSide === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                          onClick={handleSubmitOrder}
+                          disabled={!orderQuantity || !isConnected}
+                        >
+                          {orderSide === 'BUY' ? 'Comprar' : 'Vender'} {symbol.replace('USDT', '')}
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Book de ordens (Simulado) com layout responsivo */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Book de Ordens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-3 text-xs sm:text-sm font-medium">
+                    <div>Preço (USDT)</div>
+                    <div>Quantidade</div>
+                    <div>Total</div>
+                  </div>
+
+                  {/* Ordens de venda (simuladas) */}
+                  <div className="space-y-1">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const price = lastPrice ? lastPrice * (1 + (0.001 * (5 - i))) : 0
+                      const qty = 0.05 + Math.random() * 0.2
+                      return (
+                        <div key={`sell-${i}`} className="grid grid-cols-3 text-xs sm:text-sm">
+                          <div className="text-red-500">{formatPrice(price)}</div>
+                          <div>{qty.toFixed(5)}</div>
+                          <div>{(price * qty).toFixed(2)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Preço atual */}
+                  <div className="py-1 sm:py-2 text-center text-blue-highlight font-bold text-sm sm:text-base">
+                    {lastPrice ? formatPrice(lastPrice) : '-'}
+                  </div>
+
+                  {/* Ordens de compra (simuladas) */}
+                  <div className="space-y-1">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const price = lastPrice ? lastPrice * (1 - (0.001 * (i + 1))) : 0
+                      const qty = 0.05 + Math.random() * 0.2
+                      return (
+                        <div key={`buy-${i}`} className="grid grid-cols-3 text-xs sm:text-sm">
+                          <div className="text-green-500">{formatPrice(price)}</div>
+                          <div>{qty.toFixed(5)}</div>
+                          <div>{(price * qty).toFixed(2)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+EOL  
+cd /home/project && cd crypto-ai-trading-platform && cat > src/components/dashboard/TradingPanel.tsx.part2 << 'EOL'
+  // Inscrever-se em feeds de dados em tempo real
+  useEffect(() => {
+    if (!isConnected || candles.length === 0) return
+
+    // Callbacks para os WebSockets
+    const handleKlineUpdate = (data: KlineTick) => {
+      const { kline } = data
+
+      if (!kline.final) {
+        // Atualizar a última vela em tempo real
+        if (seriesRef.current) {
+          seriesRef.current.update({
+            time: kline.startTime / 1000,
+            open: Number.parseFloat(kline.open),
+            high: Number.parseFloat(kline.high),
+            low: Number.parseFloat(kline.low),
+            close: Number.parseFloat(kline.close),
+          })
+        }
+      } else {
+        // Adicionar uma nova vela quando a atual estiver finalizada
+        const newCandle = {
+          time: kline.startTime / 1000,
+          open: Number.parseFloat(kline.open),
+          high: Number.parseFloat(kline.high),
+          low: Number.parseFloat(kline.low),
+          close: Number.parseFloat(kline.close),
+          volume: Number.parseFloat(kline.volume)
+        }
+
+        setCandles(prevCandles => {
+          // Verificar se a vela já existe no array
+          const existingIndex = prevCandles.findIndex(c => c.time === newCandle.time)
+
+          if (existingIndex >= 0) {
+            // Substituir a vela existente
+            const updatedCandles = [...prevCandles]
+            updatedCandles[existingIndex] = newCandle
+            return updatedCandles
+          } else {
+            // Adicionar nova vela e remover a mais antiga se necessário
+            const updatedCandles = [...prevCandles, newCandle]
+            if (updatedCandles.length > 500) {
+              return updatedCandles.slice(1)
+            }
+            return updatedCandles
+          }
+        })
+      }
+
+      // Atualizar preço atual e variação
+      const currentPrice = Number.parseFloat(kline.close)
+      setLastPrice(currentPrice)
+
+      if (candles.length > 0) {
+        const previousClose = candles[candles.length - 1].close
+        const change = ((currentPrice - previousClose) / previousClose) * 100
+        setPriceChange(change)
+      }
+    }
+
+    const handleTradeUpdate = (data: TradeTick) => {
+      const trade = {
+        id: data.tradeId,
+        time: data.time,
+        price: Number.parseFloat(data.price),
+        quantity: Number.parseFloat(data.quantity),
+        isBuyerMaker: data.isBuyerMaker
+      }
+
+      setRecentTrades(prevTrades => {
+        // Adicionar a nova negociação ao início do array
+        const updatedTrades = [trade, ...prevTrades]
+        // Manter apenas as 20 mais recentes
+        return updatedTrades.slice(0, 20)
+      })
+
+      // Atualizar o preço atual
+      setLastPrice(trade.price)
+      setOrderPrice(trade.price.toString())
+    }
+
+    // Configurar WebSockets
+    subscribeKline({
+      symbols: [symbol],
+      interval,
+      callbacks: {
+        onKline: handleKlineUpdate,
+        onOpen: () => console.log(`Kline WebSocket connected for ${symbol}@${interval}`),
+        onClose: () => console.log(`Kline WebSocket disconnected for ${symbol}@${interval}`),
+        onError: (e) => console.error('Kline WebSocket error:', e)
+      }
+    })
+
+    subscribeTrade({
+      symbols: [symbol],
+      callbacks: {
+        onTrade: handleTradeUpdate,
+        onOpen: () => console.log(`Trade WebSocket connected for ${symbol}`),
+        onClose: () => console.log(`Trade WebSocket disconnected for ${symbol}`),
+        onError: (e) => console.error('Trade WebSocket error:', e)
+      }
+    })
+
+    // Limpeza ao desmontar
+    return () => {
+      const klineStreamName = `${symbol.toLowerCase()}@kline_${interval}`
+      const tradeStreamName = `${symbol.toLowerCase()}@trade`
+
+      unsubscribe(klineStreamName)
+      unsubscribe(tradeStreamName)
+    }
+  }, [symbol, interval, isConnected, candles, subscribeKline, subscribeTrade, unsubscribe])
+
+  // Limpar todas as conexões WebSocket ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      unsubscribeAll()
+    }
+  }, [unsubscribeAll])
+
+  // Atualizar o preço da ordem quando o último preço mudar
+  useEffect(() => {
+    if (orderType === 'LIMIT' && lastPrice) {
+      setOrderPrice(lastPrice.toString())
+    }
+  }, [lastPrice, orderType])
+
+  // Manipuladores de eventos
+  const handleSymbolChange = (value: string) => {
+    setSymbol(value)
+  }
+
+  const handleIntervalChange = (value: string) => {
+    setInterval(value)
+  }
+
+  const handleChartTypeChange = (value: 'candles' | 'line') => {
+    setChartType(value)
+  }
+
+  const handleOrderSideChange = (value: OrderSide) => {
+    setOrderSide(value)
+  }
+
+  const handleOrderTypeChange = (value: OrderType) => {
+    setOrderType(value)
+  }
+
+  const handleSubmitOrder = async () => {
+    if (!isConnected) {
+      toast.error('Por favor, conecte-se à sua conta Binance primeiro')
+      return
+    }
+
+    if (!orderQuantity || (orderType === 'LIMIT' && !orderPrice)) {
+      toast.error('Por favor, preencha todos os campos obrigatórios')
+      return
+    }
+
+    try {
+      toast.success(`Ordem simulada: ${orderSide} ${orderQuantity} ${symbol} à ${orderType === 'MARKET' ? 'preço de mercado' : orderPrice}`)
+
+      // Aqui seria feita a chamada real para enviar a ordem
+      // const result = await binanceService.createOrder(
+      //  symbol,
+      //  orderSide,
+      //  orderType,
+      //  orderQuantity,
+      //  orderType === 'LIMIT' ? orderPrice : undefined
+      // )
+
+      // Limpar os campos do formulário de ordem
+      setOrderQuantity('')
+
+      // Feedback ao usuário
+      toast.success(`Ordem de ${orderSide === 'BUY' ? 'compra' : 'venda'} enviada com sucesso!`)
+    } catch (error) {
+      console.error('Erro ao enviar ordem:', error)
+      toast.error('Erro ao enviar ordem. Verifique suas configurações.')
+    }
+  }
+
+  // Função para formatar preço
+  const formatPrice = (price: number): string => {
+    return price.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: price < 10 ? 6 : price < 1000 ? 4 : 2
+    })
+  }
+
+  // Função para formatar timestamp em hora
+  const formatTime = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }
+
+  // Status do WebSocket para exibir ao usuário
+  const wsStatus = isWsConnected(`${symbol.toLowerCase()}@kline_${interval}`)
+
+  return (
+    <div className="space-y-6 md:space-y-8">
+      {/* Cabeçalho responsivo */}
+      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Trading</h2>
+          <p className="text-muted-foreground">
+            Visualize gráficos em tempo real e execute ordens
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2">
+            <Badge variant={wsStatus ? "default" : "outline"} className={wsStatus ? "bg-green-500" : ""}>
+              {wsStatus ? "Conectado" : "Desconectado"}
+            </Badge>
+            <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Atualizar</span>
+            </Button>
+          </div>
+          <Button size="sm">
+            <Settings className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Configurações</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Seleção de símbolo e intervalo - responsivo */}
+      <div className="flex flex-wrap gap-2 sm:gap-4">
+        <div className="w-full sm:w-auto">
+          <Select value={symbol} onValueChange={handleSymbolChange}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="Selecione um par" />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_SYMBOLS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-auto">
+          <Select value={interval} onValueChange={handleIntervalChange}>
+            <SelectTrigger className="w-full sm:w-24">
+              <SelectValue placeholder="Intervalo" />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_INTERVALS.map((i) => (
+                <SelectItem key={i.value} value={i.value}>
+                  {i.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex-1"></div>
+
+        {/* Tipo de gráfico */}
+        <div className="w-full sm:w-auto flex">
+          <Button
+            variant={chartType === 'candles' ? 'secondary' : 'outline'}
+            className="flex-1 sm:flex-none rounded-r-none text-xs sm:text-sm"
+            onClick={() => handleChartTypeChange('candles')}
+          >
+            <CandlestickChart className="h-4 w-4 mr-1 sm:mr-2" />
+            <span>Candles</span>
+          </Button>
+          <Button
+            variant={chartType === 'line' ? 'secondary' : 'outline'}
+            className="flex-1 sm:flex-none rounded-l-none text-xs sm:text-sm"
+            onClick={() => handleChartTypeChange('line')}
+          >
+            <LineChart className="h-4 w-4 mr-1 sm:mr-2" />
+            <span>Linha</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Preço atual e variação - responsivo */}
+      {lastPrice && (
+        <div className="flex items-center gap-4">
+          <div className="text-xl sm:text-2xl font-bold">
+            ${formatPrice(lastPrice)}
+          </div>
+          <div className={`flex items-center ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            {priceChange >= 0 ? (
+              <ArrowUpRight className="h-4 w-4 mr-1" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4 mr-1" />
+            )}
+            {priceChange.toFixed(2)}%
+          </div>
+        </div>
+      )}
+
+      {/* Layout principal - grid responsivo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Gráfico - ocupa toda a largura em mobile, 2/3 em tablet, 3/4 em desktop */}
+        <div className="md:col-span-2 lg:col-span-3 space-y-4 md:space-y-6">
+          {/* Gráfico principal com altura responsiva */}
+          <Card>
+            <CardContent className="p-0 overflow-hidden">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]">
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-highlight"></div>
+                    <p className="mt-4 text-sm text-muted-foreground">Carregando dados...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]" ref={chartContainerRef}></div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Negociações recentes - responsivo com scroll horizontal em telas pequenas */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Negociações Recentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-4 font-medium">Hora</th>
+                      <th className="text-left py-2 px-4 font-medium">Preço</th>
+                      <th className="text-left py-2 px-4 font-medium">Quantidade</th>
+                      <th className="text-left py-2 px-4 font-medium">Lado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentTrades.map((trade) => (
+                      <tr key={trade.id} className="border-b">
+                        <td className="py-2 px-4">{formatTime(trade.time)}</td>
+                        <td className={`py-2 px-4 ${trade.isBuyerMaker ? 'text-red-500' : 'text-green-500'}`}>
+                          ${formatPrice(trade.price)}
+                        </td>
+                        <td className="py-2 px-4">{trade.quantity.toFixed(5)}</td>
+                        <td className="py-2 px-4">
+                          <Badge variant="outline" className={trade.isBuyerMaker ? 'text-red-500 border-red-500' : 'text-green-500 border-green-500'}>
+                            {trade.isBuyerMaker ? 'VENDA' : 'COMPRA'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Painel de ordens - ocupa toda a largura em mobile, 1/3 em tablet, 1/4 em desktop */}
+        <div className="md:col-span-1 lg:col-span-1">
+          <div className="sticky top-4 space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Nova Ordem</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="limit" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="limit" onClick={() => handleOrderTypeChange('LIMIT')}>
+                      Limite
+                    </TabsTrigger>
+                    <TabsTrigger value="market" onClick={() => handleOrderTypeChange('MARKET')}>
+                      Mercado
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <div className="mt-4 sm:mt-6">
+                    {/* Botões de compra/venda */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
+                      <Button
+                        className={`flex-1 text-sm sm:text-base ${orderSide === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                        onClick={() => handleOrderSideChange('BUY')}
+                      >
+                        Comprar
+                      </Button>
+                      <Button
+                        className={`flex-1 text-sm sm:text-base ${orderSide === 'SELL' ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                        onClick={() => handleOrderSideChange('SELL')}
+                      >
+                        Vender
+                      </Button>
+                    </div>
+
+                    {/* Formulário de ordem responsivo */}
+                    <TabsContent value="limit">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Preço</label>
+                          <div className="flex mt-1">
+                            <Input
+                              className="rounded-r-none"
+                              value={orderPrice}
+                              onChange={(e) => setOrderPrice(e.target.value)}
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                            />
+                            <Button variant="outline" className="rounded-l-none" disabled>
+                              USDT
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium">Quantidade</label>
+                          <div className="flex mt-1">
+                            <Input
+                              className="rounded-r-none"
+                              value={orderQuantity}
+                              onChange={(e) => setOrderQuantity(e.target.value)}
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                            />
+                            <Button variant="outline" className="rounded-l-none" disabled>
+                              {symbol.replace('USDT', '')}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <Separator className="my-2 sm:my-3" />
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Total</span>
+                            <span>{orderPrice && orderQuantity ? `${(Number.parseFloat(orderPrice) * Number.parseFloat(orderQuantity)).toFixed(2)} USDT` : '0.00 USDT'}</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          className={`w-full ${orderSide === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                          onClick={handleSubmitOrder}
+                          disabled={!orderPrice || !orderQuantity || !isConnected}
+                        >
+                          {orderSide === 'BUY' ? 'Comprar' : 'Vender'} {symbol.replace('USDT', '')}
+                        </Button>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="market">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Quantidade</label>
+                          <div className="flex mt-1">
+                            <Input
+                              className="rounded-r-none"
+                              value={orderQuantity}
+                              onChange={(e) => setOrderQuantity(e.target.value)}
+                              type="number"
+                              step="0.000001"
+                              min="0"
+                            />
+                            <Button variant="outline" className="rounded-l-none" disabled>
+                              {symbol.replace('USDT', '')}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <Separator className="my-2 sm:my-3" />
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Total estimado</span>
+                            <span>{lastPrice && orderQuantity ? `~${(lastPrice * Number.parseFloat(orderQuantity)).toFixed(2)} USDT` : '0.00 USDT'}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            O preço do mercado pode variar do preço exibido.
+                          </p>
+                        </div>
+
+                        <Button
+                          className={`w-full ${orderSide === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                          onClick={handleSubmitOrder}
+                          disabled={!orderQuantity || !isConnected}
+                        >
+                          {orderSide === 'BUY' ? 'Comprar' : 'Vender'} {symbol.replace('USDT', '')}
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Book de ordens (Simulado) com layout responsivo */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Book de Ordens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-3 text-xs sm:text-sm font-medium">
+                    <div>Preço (USDT)</div>
+                    <div>Quantidade</div>
+                    <div>Total</div>
+                  </div>
+
+                  {/* Ordens de venda (simuladas) */}
+                  <div className="space-y-1">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const price = lastPrice ? lastPrice * (1 + (0.001 * (5 - i))) : 0
+                      const qty = 0.05 + Math.random() * 0.2
+                      return (
+                        <div key={`sell-${i}`} className="grid grid-cols-3 text-xs sm:text-sm">
+                          <div className="text-red-500">{formatPrice(price)}</div>
+                          <div>{qty.toFixed(5)}</div>
+                          <div>{(price * qty).toFixed(2)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Preço atual */}
+                  <div className="py-1 sm:py-2 text-center text-blue-highlight font-bold text-sm sm:text-base">
+                    {lastPrice ? formatPrice(lastPrice) : '-'}
+                  </div>
+
+                  {/* Ordens de compra (simuladas) */}
+                  <div className="space-y-1">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const price = lastPrice ? lastPrice * (1 - (0.001 * (i + 1))) : 0
+                      const qty = 0.05 + Math.random() * 0.2
+                      return (
+                        <div key={`buy-${i}`} className="grid grid-cols-3 text-xs sm:text-sm">
+                          <div className="text-green-500">{formatPrice(price)}</div>
+                          <div>{qty.toFixed(5)}</div>
+                          <div>{(price * qty).toFixed(2)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

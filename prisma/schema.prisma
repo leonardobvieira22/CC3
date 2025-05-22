@@ -1,0 +1,365 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto]
+}
+
+// Modelos para autenticação
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id                      String        @id @default(cuid())
+  name                    String?
+  email                   String?       @unique
+  emailVerified           DateTime?
+  emailVerificationToken  String?       @unique
+  emailVerificationExpires DateTime?
+  resetPasswordToken      String?       @unique
+  resetPasswordExpires    DateTime?
+  image                   String?
+  password                String?       // Hashed password for email/password auth
+  cpf                     String?       @unique // CPF do usuário (número de identificação brasileiro)
+  dateOfBirth             DateTime?     // Data de nascimento do usuário
+  phone                   String?       // Número de telefone (opcional)
+  isActive                Boolean       @default(true) // Status da conta (ativa/inativa)
+  termsAccepted           Boolean       @default(false) // Aceitação dos termos de uso
+  privacyAccepted         Boolean       @default(false) // Aceitação da política de privacidade
+  role                    UserRole      @default(USER)
+  accounts                Account[]
+  sessions                Session[]
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  apiKeys                 ApiKey[]
+  priceAlerts             PriceAlert[]
+  tradingRobots           TradingRobot[]
+  tradingSettings         TradingSetting[]
+  paperTradingWallet      PaperTradingWallet?
+  tradingHistory          TradingHistory[]
+  notificationPrefs       NotificationPreferences?
+  emailLogs               EmailLog[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  USER
+  PREMIUM
+  ADMIN
+}
+
+// Modelos para configurações de trading
+model ApiKey {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exchange     String    // e.g., "binance", "kucoin", etc.
+  label        String    // User-defined label
+  apiKey       String    @db.Text
+  apiSecret    String    @db.Text
+  permissions  String[]  // e.g., ["READ_ONLY", "SPOT_TRADING", "FUTURES"]
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+  isActive     Boolean   @default(true)
+  ipWhitelist  String[]  // Array of allowed IP addresses
+
+  @@index([userId])
+}
+
+model TradingSetting {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  riskLevel          RiskLevel @default(MEDIUM)
+  defaultOrderSize   Float     @default(5.0)  // % of available balance
+  maxOpenPositions   Int       @default(5)
+  defaultLeverage    Float     @default(1.0)
+  enableStopLoss     Boolean   @default(true)
+  stopLossPercentage Float     @default(5.0)
+  enableTakeProfit   Boolean   @default(true)
+  takeProfitPercentage Float    @default(15.0)
+  tradingPairs       String[]  // Array of allowed trading pairs
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId])
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// Modelos para trading e acompanhamento
+model TradingRobot {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  strategy         TradingStrategy
+  status           RobotStatus       @default(INACTIVE)
+  settings         Json              // Strategy-specific settings
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tradingPairs     String[]          // Array of trading pairs this robot works with
+  backtestResults  BacktestResult[]
+  tradingHistory   TradingHistory[]  // Trading history related to this robot
+
+  @@index([userId])
+}
+
+enum TradingStrategy {
+  RSI_STRATEGY
+  MACD_STRATEGY
+  BOLLINGER_BANDS
+  TREND_FOLLOWING
+  SCALPING
+  CUSTOM
+}
+
+enum RobotStatus {
+  ACTIVE
+  INACTIVE
+  PAUSED
+  BACKTESTING
+  ERROR
+}
+
+model BacktestResult {
+  id           String       @id @default(cuid())
+  robotId      String
+  robot        TradingRobot @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  startDate    DateTime
+  endDate      DateTime
+  symbol       String
+  timeframe    String       // e.g., "1m", "5m", "1h", "1d"
+  initialBalance Float
+  finalBalance Float
+  profitLoss   Float
+  winRate      Float
+  trades       Int
+  sharpeRatio  Float?
+  maxDrawdown  Float?
+  settings     Json         // Settings used for this backtest
+  createdAt    DateTime     @default(now())
+
+  @@index([robotId])
+}
+
+model TradingHistory {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  robotId        String?
+  robot          TradingRobot?   @relation(fields: [robotId], references: [id], onDelete: SetNull)
+  exchange       String          // e.g., "binance", "paper_trading"
+  symbol         String
+  entryPrice     Float
+  exitPrice      Float?
+  quantity       Float
+  side           TradeSide
+  type           TradeType
+  status         TradeStatus     @default(OPEN)
+  pnl            Float?
+  pnlPercentage  Float?
+  fees           Float?
+  entryTime      DateTime        @default(now())
+  exitTime       DateTime?
+  stopLoss       Float?
+  takeProfit     Float?
+  notes          String?
+  tags           String[]
+  isDemo         Boolean         @default(false)
+  leverage       Float           @default(1.0)
+
+  @@index([userId])
+  @@index([robotId])
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+enum TradeType {
+  MARKET
+  LIMIT
+  STOP
+  TAKE_PROFIT
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+  CANCELED
+  EXPIRED
+}
+
+// Carteira de papel trading
+model PaperTradingWallet {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance           Float    @default(10000.0)  // Initial balance in USDT
+  equity            Float    @default(10000.0)  // Balance + value of open positions
+  openPositionsJson Json?    // Store open positions as JSON
+  historyJson       Json?    // Store trading history as JSON
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Alertas de preço
+model PriceAlert {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol      String           // e.g., "BTCUSDT"
+  targetPrice Float
+  direction   AlertDirection
+  status      AlertStatus      @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  triggeredAt DateTime?
+  recurrence  AlertRecurrence  @default(ONCE)
+  message     String?
+  notifyVia   NotificationChannel[]
+
+  @@index([userId])
+  @@index([symbol, status])
+}
+
+enum AlertDirection {
+  ABOVE
+  BELOW
+  CROSS
+}
+
+enum AlertStatus {
+  ACTIVE
+  TRIGGERED
+  EXPIRED
+  CANCELLED
+}
+
+enum AlertRecurrence {
+  ONCE
+  RECURRING
+}
+
+enum NotificationChannel {
+  EMAIL
+  PUSH
+  SMS
+  IN_APP
+}
+
+// Preferências de notificação
+model NotificationPreferences {
+  id                String              @id @default(cuid())
+  userId            String              @unique
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailEnabled      Boolean             @default(true)
+  pushEnabled       Boolean             @default(true)
+  smsEnabled        Boolean             @default(false)
+  emailFrequency    NotificationFrequency @default(INSTANT)
+  marketUpdates     Boolean             @default(true)
+  tradeAlerts       Boolean             @default(true)
+  securityAlerts    Boolean             @default(true)
+  newsAlerts        Boolean             @default(false)
+  priceAlerts       Boolean             @default(true)
+  robotAlerts       Boolean             @default(true)
+  subscriptionAlerts Boolean             @default(true)
+  quietHoursEnabled Boolean             @default(false)
+  quietHoursStart   String?             // Format: "HH:MM" (24h)
+  quietHoursEnd     String?             // Format: "HH:MM" (24h)
+  timezone          String              @default("UTC")
+  pushToken         String?             // For push notifications
+  updatedAt         DateTime            @updatedAt
+}
+
+enum NotificationFrequency {
+  INSTANT
+  HOURLY
+  DAILY
+  WEEKLY
+}
+
+// Modelo para logs de email
+model EmailLog {
+  id            String      @id @default(uuid())
+  toEmail       String
+  toName        String?
+  subject       String
+  emailType     EmailType
+  status        EmailStatus
+  statusDetails String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([emailType])
+  @@index([createdAt])
+}
+
+enum EmailType {
+  VERIFICATION
+  PASSWORD_RESET
+  NOTIFICATION
+  ALERT
+  TEST
+  OTHER
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  SPAM
+  BLOCKED
+}

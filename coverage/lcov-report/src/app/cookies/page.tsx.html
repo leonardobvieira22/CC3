@@ -1,0 +1,418 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/app/cookies/page.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/app/cookies</a> page.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/3</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/2</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const <span class="cstat-no" title="statement not covered" >metadata </span>= <span class="cstat-no" title="statement not covered" >{</span>
+  title: 'Política de Cookies | AI Crypto Trading',
+  description: 'Conheça nossa política de cookies e como utilizamos dados para melhorar sua experiência.'
+}
+&nbsp;
+export default function <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >CookiesPage() {</span></span>
+  return (
+    &lt;div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12"&gt;
+      &lt;div className="max-w-3xl mx-auto"&gt;
+        &lt;h1 className="text-3xl font-bold mb-8 text-center text-foreground"&gt;
+          Política de Cookies
+        &lt;/h1&gt;
+&nbsp;
+        &lt;div className="prose dark:prose-invert max-w-none"&gt;
+          &lt;p className="text-lg text-gray-700 dark:text-gray-200 mb-6"&gt;
+            Última atualização: 15 de maio de 2025
+          &lt;/p&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;1. O que são cookies?&lt;/h2&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Cookies são pequenos arquivos de texto que são armazenados em seu computador ou dispositivo móvel quando você visita um site.
+            Eles são amplamente utilizados para fazer os sites funcionarem de maneira mais eficiente,
+            bem como fornecer informações aos proprietários do site.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;2. Como utilizamos cookies&lt;/h2&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Utilizamos cookies e tecnologias semelhantes por diversas razões, incluindo:
+          &lt;/p&gt;
+          &lt;ul className="list-disc pl-6 mb-6 text-gray-700 dark:text-gray-200"&gt;
+            &lt;li className="mb-2"&gt;Para fazer nosso site funcionar conforme o esperado&lt;/li&gt;
+            &lt;li className="mb-2"&gt;Para lembrar suas preferências e configurações&lt;/li&gt;
+            &lt;li className="mb-2"&gt;Para entender como você usa nosso site e melhorar sua experiência&lt;/li&gt;
+            &lt;li className="mb-2"&gt;Para medir a eficácia de nossos serviços e comunicações&lt;/li&gt;
+            &lt;li className="mb-2"&gt;Para personalizar o conteúdo e os anúncios que você vê&lt;/li&gt;
+            &lt;li&gt;Para manter sua conta segura&lt;/li&gt;
+          &lt;/ul&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;3. Tipos de cookies que utilizamos&lt;/h2&gt;
+&nbsp;
+          &lt;h3 className="text-xl font-semibold mb-3 text-foreground"&gt;3.1. Cookies essenciais&lt;/h3&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Estes cookies são necessários para o funcionamento do site e não podem ser desativados.
+            Eles geralmente são definidos apenas em resposta a ações feitas por você, como definir suas preferências de privacidade,
+            fazer login ou preencher formulários.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h3 className="text-xl font-semibold mb-3 text-foreground"&gt;3.2. Cookies de preferências&lt;/h3&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Estes cookies permitem que o site lembre de escolhas que você faz para proporcionar uma experiência mais personalizada.
+            Eles podem ser usados para lembrar seu idioma preferido, a região em que você está ou suas configurações de tema escuro/claro.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h3 className="text-xl font-semibold mb-3 text-foreground"&gt;3.3. Cookies analíticos&lt;/h3&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Usamos cookies analíticos para entender como os visitantes interagem com nosso site.
+            Eles nos ajudam a medir e analisar padrões de tráfego, permitindo melhorar nosso site e sua experiência.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h3 className="text-xl font-semibold mb-3 text-foreground"&gt;3.4. Cookies de marketing&lt;/h3&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Estes cookies são usados para rastrear os visitantes em diferentes sites.
+            A intenção é exibir anúncios relevantes e envolventes para o usuário individual,
+            tornando-os mais valiosos para os editores e anunciantes terceirizados.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;4. Como gerenciar seus cookies&lt;/h2&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            A maioria dos navegadores permite que você controle cookies através das configurações.
+            Você pode configurar seu navegador para recusar todos os cookies ou indicar quando um cookie está sendo enviado.
+            No entanto, algumas funcionalidades do site podem não funcionar corretamente se você desativar os cookies.
+          &lt;/p&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-6"&gt;
+            Para saber mais sobre como gerenciar cookies em seu navegador, visite:
+          &lt;/p&gt;
+          &lt;ul className="list-disc pl-6 mb-6 text-gray-700 dark:text-gray-200"&gt;
+            &lt;li className="mb-2"&gt;Google Chrome: &lt;a href="https://support.google.com/chrome/answer/95647" className="text-blue-highlight hover:underline"&gt;https://support.google.com/chrome/answer/95647&lt;/a&gt;&lt;/li&gt;
+            &lt;li className="mb-2"&gt;Mozilla Firefox: &lt;a href="https://support.mozilla.org/pt-BR/kb/ative-e-desative-os-cookies-que-os-sites-usam" className="text-blue-highlight hover:underline"&gt;https://support.mozilla.org/pt-BR/kb/ative-e-desative-os-cookies-que-os-sites-usam&lt;/a&gt;&lt;/li&gt;
+            &lt;li className="mb-2"&gt;Safari: &lt;a href="https://support.apple.com/pt-br/guide/safari/sfri11471/mac" className="text-blue-highlight hover:underline"&gt;https://support.apple.com/pt-br/guide/safari/sfri11471/mac&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;Microsoft Edge: &lt;a href="https://support.microsoft.com/pt-br/microsoft-edge/excluir-cookies-no-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" className="text-blue-highlight hover:underline"&gt;https://support.microsoft.com/pt-br/microsoft-edge/excluir-cookies-no-microsoft-edge&lt;/a&gt;&lt;/li&gt;
+          &lt;/ul&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;5. Consentimento&lt;/h2&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Quando você visita nosso site pela primeira vez, solicitamos seu consentimento para o uso de cookies.
+            Você pode escolher aceitar todos os cookies ou personalizar suas preferências.
+          &lt;/p&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-6"&gt;
+            Você pode alterar suas preferências a qualquer momento usando nossa ferramenta de gerenciamento de cookies
+            acessível a partir do rodapé do site.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;6. Atualizações desta política&lt;/h2&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-6"&gt;
+            Podemos atualizar esta Política de Cookies periodicamente para refletir alterações em nossas práticas ou por outros motivos operacionais, legais ou regulatórios.
+            Recomendamos que você visite regularmente esta página para manter-se informado sobre o uso de cookies.
+          &lt;/p&gt;
+&nbsp;
+          &lt;h2 className="text-2xl font-semibold mb-4 text-foreground"&gt;7. Contato&lt;/h2&gt;
+          &lt;p className="text-gray-700 dark:text-gray-200 mb-4"&gt;
+            Se você tiver alguma dúvida sobre nossa Política de Cookies, entre em contato conosco:
+          &lt;/p&gt;
+          &lt;ul className="list-none mb-6 text-gray-700 dark:text-gray-200"&gt;
+            &lt;li className="mb-2"&gt;Email: privacy@aicryptotrading.com&lt;/li&gt;
+            &lt;li&gt;Telefone: +55 (11) 4002-8922&lt;/li&gt;
+          &lt;/ul&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  )
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2025-05-21T22:28:03.832Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    
